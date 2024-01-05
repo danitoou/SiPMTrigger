@@ -1,0 +1,462 @@
+#define CAEN_USE_DIGITIZERS
+#define IGNORE_DPP_DEPRECATED
+
+#include "stdio.h"
+#include "stdlib.h"
+#include "CAENDigitizer.h"
+#include "Daq.h"
+#include "FADC.h"
+#include "config.h"
+
+
+int FADCTriggerConfig(){
+  int ret=0;
+  //Trigger config:
+  //  ret |= CAEN_DGTZ_SetSWTriggerMode(handle,CAEN_DGTZ_TRGMODE_ACQ_AND_EXTOUT);   // software triggers
+  printf("Configuring trigger ........ \n");
+
+  if(cfg->exttrigger) {
+    ret |= FADCSetExtTriggers();
+    printf("Using external triggers\n");
+  } else if(cfg->chtrigger) {
+    ret |= FADCSetChannelTriggers();
+    printf("Using internal triggers\n");
+  } else {
+    ret |= FADCSetSoftwareTriggers();
+    printf("Using software triggers\n");
+  }
+  
+  
+  printf("----------DONE\n");
+  
+  return ret;
+}
+
+int FADCSetSoftwareTriggers(){
+  int ret;
+
+  ret |= CAEN_DGTZ_SetExtTriggerInputMode(handle,CAEN_DGTZ_TRGMODE_DISABLED); //No external triggers
+  ret |= CAEN_DGTZ_SetChannelSelfTrigger(handle,CAEN_DGTZ_TRGMODE_DISABLED,cfg->chmask);
+  if(cfg->iolevel == IOTTL) {
+    ret |= CAEN_DGTZ_SetIOLevel (handle,CAEN_DGTZ_IOLevel_TTL);
+  } else {
+    ret |= CAEN_DGTZ_SetIOLevel (handle,CAEN_DGTZ_IOLevel_NIM);
+  }
+  ret |= CAEN_DGTZ_SetSWTriggerMode(handle,CAEN_DGTZ_TRGMODE_ACQ_AND_EXTOUT);   //Software triggers
+  return ret;
+}
+
+int FADCSetChannelTriggers(){
+  int ret;
+  int reg,data;
+  int i;
+  int th ;
+  //th=597;
+
+  ret |= CAEN_DGTZ_SetSWTriggerMode(handle,CAEN_DGTZ_TRGMODE_DISABLED);   //No software triggers
+  ret |= CAEN_DGTZ_SetExtTriggerInputMode(handle,CAEN_DGTZ_TRGMODE_DISABLED); //No external triggers
+  //ret |= CAEN_DGTZ_SetExtTriggerInputMode(handle,CAEN_DGTZ_TRGMODE_ACQ_ONLY); //No external triggers
+  if(cfg->iolevel == IOTTL) {
+    ret |= CAEN_DGTZ_SetIOLevel (handle,CAEN_DGTZ_IOLevel_TTL);
+  } else {
+    ret |= CAEN_DGTZ_SetIOLevel (handle,CAEN_DGTZ_IOLevel_NIM);
+  }
+
+  //Configure channel self-triggering
+  ret |= CAEN_DGTZ_SetChannelSelfTrigger(handle,CAEN_DGTZ_TRGMODE_ACQ_AND_EXTOUT,cfg->chtrigmask);
+  //ret |= CAEN_DGTZ_SetChannelSelfTrigger(handle,CAEN_DGTZ_TRGMODE_ACQ_ONLY,cfg->chmask);
+
+  //Same trigger treshold for all the channels
+
+  //Loop through the enabled channels:
+  for(i=0;i<cfg->nchan;i++) 
+    if( (cfg->chtrigmask>>i) & 0x1) {
+      th = (cfg->chped[i] - cfg->trigthr);
+
+      printf("Configuring channel %d with threshold %d\n",i,th);
+      //  Ch i
+      ret |= CAEN_DGTZ_SetChannelTriggerThreshold(handle,i,th); 
+      ret |= CAEN_DGTZ_SetChannelPulsePolarity(handle,i,CAEN_DGTZ_PulsePolarityNegative);
+      ret |= CAEN_DGTZ_SetTriggerPolarity (handle,i,CAEN_DGTZ_TriggerOnFallingEdge);
+    }
+  return 0;
+  
+  //  Ch 1
+  ret |= CAEN_DGTZ_SetChannelTriggerThreshold(handle,1,th); 
+  ret |= CAEN_DGTZ_SetChannelPulsePolarity(handle,1,CAEN_DGTZ_PulsePolarityNegative);
+  ret |= CAEN_DGTZ_SetTriggerPolarity (handle,1,CAEN_DGTZ_TriggerOnFallingEdge);
+  //  Ch 2
+  ret |= CAEN_DGTZ_SetChannelTriggerThreshold(handle,2,th); 
+  ret |= CAEN_DGTZ_SetChannelPulsePolarity(handle,2,CAEN_DGTZ_PulsePolarityNegative);
+  ret |= CAEN_DGTZ_SetTriggerPolarity (handle,2,CAEN_DGTZ_TriggerOnFallingEdge);
+  //  Ch 3
+  ret |= CAEN_DGTZ_SetChannelTriggerThreshold(handle,3,th ); 
+  ret |= CAEN_DGTZ_SetChannelPulsePolarity(handle,3,CAEN_DGTZ_PulsePolarityNegative);
+  ret |= CAEN_DGTZ_SetTriggerPolarity (handle,3,CAEN_DGTZ_TriggerOnFallingEdge);
+
+}
+
+int FADCDPPConfig(){
+  CAEN_DGTZ_ErrorCode ret=0;
+  int i;
+  
+  // Set the DPP specific parameters for the channels in the given channelMask
+  ret |= CAEN_DGTZ_SetDPPParameters(handle, Params.ChannelMask, &DPPParams);
+  
+  for(i=0;i<cfg->nchan;i++) {
+    // Set the number of samples for each waveform (you can set different RL for different channels)
+    ret |= CAEN_DGTZ_SetRecordLength(handle, Params.RecordLength, i);
+    // Set the Pre-Trigger size (in samples)
+    ret |= CAEN_DGTZ_SetDPPPreTriggerSize(handle, i, 5);
+  }
+  
+  ret |= CAEN_DGTZ_SetDPP_PSD_VirtualProbe(handle, 
+					   CAEN_DGTZ_DPP_VIRTUALPROBE_SINGLE, 
+					   CAEN_DGTZ_DPP_PSD_VIRTUALPROBE_Baseline, 
+					   CAEN_DGTZ_DPP_PSD_DIGITALPROBE1_None, 
+					   CAEN_DGTZ_DPP_PSD_DIGITALPROBE2_None);
+
+  return ret;
+  
+}
+
+
+
+int FADCPostConfig(){
+  //Necessary since not all functions can be programmed via CAENDigitizer lib
+  int reg,data;
+  
+  //Post trigger configuration:
+  reg = 0x8000;
+  CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  if( (data >> 1)  & 0x1) 
+    printf("Trigger overlapping enabled by default!\n");    
+
+  if( cfg->tr_overlap ) {
+    data |= (0x1 << 1);
+    printf("Trigger overlapping enabled\n");
+  }
+
+  if( cfg->dual) {
+    data |= (0x1 << 12);
+    printf("Dual edge sampling enabled\n");
+  }
+
+  CAEN_DGTZ_WriteRegister(handle,reg,data);
+
+
+
+  reg=0x8120;
+  CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel mask in register %x: %d\n",reg,data);
+  data=cfg->chmask;
+  CAEN_DGTZ_SetChannelEnableMask(handle,cfg->chmask);  
+
+  return 0;
+}
+
+
+
+int FADCSetExtTriggers(){
+  int ret=0;
+  ret |= CAEN_DGTZ_SetSWTriggerMode(handle,CAEN_DGTZ_TRGMODE_DISABLED);   //No software triggers
+  //  ret |= CAEN_DGTZ_SetChannelSelfTrigger(handle,CAEN_DGTZ_TRGMODE_DISABLED,3);
+  //  ret |= CAEN_DGTZ_SetIOLevel (handle,CAEN_DGTZ_IOLevel_NIM);
+  if(cfg->iolevel == IOTTL) {
+    ret |= CAEN_DGTZ_SetIOLevel (handle,CAEN_DGTZ_IOLevel_TTL);
+  } else {
+    ret |= CAEN_DGTZ_SetIOLevel (handle,CAEN_DGTZ_IOLevel_NIM);
+  }
+  ret |= CAEN_DGTZ_SetExtTriggerInputMode(handle,CAEN_DGTZ_TRGMODE_ACQ_AND_EXTOUT); //Use and transmit external trigger
+
+  return ret;
+}
+
+
+
+int FADCChannelsCallibrate(){
+  int ret=0;
+  int reg,data;
+  int i;
+  
+  printf("Calibrating channels ....... ");
+  
+  // Set to 0 the Calibration bit of Broadcast ADC Configuration register.(see § 5.8 and 5.16)
+  CAEN_DGTZ_WriteRegister(handle,0x809C,0);
+  
+  // Set such bit to 1. The self calibration process will start and the flag "Calibrating bit" of
+  CAEN_DGTZ_WriteRegister(handle,0x809C,2);
+  // Channel n Status register (see § 5.4) will be set to 0.
+
+  // Polling on the flag "Calibrating bit" until it returns to 1 (few milliseconds).
+  while(ret!=8) {
+    ret = 0;
+    for(i=0;i<8;i++) {
+      reg = 0x1088 + i * 0x100;
+      CAEN_DGTZ_ReadRegister(handle,reg, &data);
+      ret += ( (data >> 6 ) & 0x1) ;
+    }
+  }
+  //All 8 channels calibrated
+
+  // Set again to 0 the Calibration bit of Broadcast ADC Configuration register
+  CAEN_DGTZ_WriteRegister(handle,0x809C,0);
+  
+  printf("DONE\n");
+  return ret;
+}
+
+
+int FADCSetChannelOffsets(){
+    //Channel configuration:
+  uint32_t ChVOffset = 0x2000;
+  int reg,data;
+  int ret=0;
+  /* //  ChVOffset = 0; */
+
+  /* reg = 0x1098; */
+  /* CAEN_DGTZ_ReadRegister(handle,reg,&data); */
+  /* printf("Channel %d DC offset: %x, %d\n",0,data,data); */
+  /* reg = 0x1198; */
+  /* CAEN_DGTZ_ReadRegister(handle,reg,&data); */
+  /* printf("Channel %d DC offset: %x, %d\n",1,data,data); */
+  /* reg = 0x1298; */
+  /* CAEN_DGTZ_ReadRegister(handle,reg,&data); */
+  /* printf("Channel %d DC offset: %x, %d\n",2,data,data); */
+  /* reg = 0x1398; */
+  /* CAEN_DGTZ_ReadRegister(handle,reg,&data); */
+  /* printf("Channel %d DC offset: %x,%d\n",3,data,data); */
+
+  /* //  return; */
+
+  printf("Changing the channel DC offsets to 0x%x\n",ChVOffset);
+  //  CAEN_DGTZ_SetChannelDCOffset(handle,-1,ChVOffset);
+  if(!cfg->dual) {
+    CAEN_DGTZ_SetChannelDCOffset(handle,0,ChVOffset+524);
+    CAEN_DGTZ_SetChannelDCOffset(handle,1,ChVOffset+1441);
+    CAEN_DGTZ_SetChannelDCOffset(handle,2,ChVOffset+720);
+    CAEN_DGTZ_SetChannelDCOffset(handle,3,ChVOffset);
+    CAEN_DGTZ_SetChannelDCOffset(handle,4,ChVOffset);
+    CAEN_DGTZ_SetChannelDCOffset(handle,5,ChVOffset);
+    CAEN_DGTZ_SetChannelDCOffset(handle,6,ChVOffset);
+    CAEN_DGTZ_SetChannelDCOffset(handle,7,ChVOffset);
+
+  }
+  /*
+  sleep(1);
+
+  reg = 0x1098;
+  CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel %d DC offset: %x, %d\n",0,data,data);
+  reg = 0x1198;
+  CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel %d DC offset: %x, %d\n",1,data,data);
+  reg = 0x1298;
+  CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel %d DC offset: %x, %d\n",2,data,data);
+  reg = 0x1398;
+  ret = CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel %d DC offset: %x, %d\n",3,data,data);
+  reg = 0x1498;
+  CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel %d DC offset: %x, %d\n",4,data,data);
+  reg = 0x1598;
+  CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel %d DC offset: %x, %d\n",5,data,data);
+  reg = 0x1698;
+  CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel %d DC offset: %x, %d\n",6,data,data);
+  reg = 0x1798;
+  ret = CAEN_DGTZ_ReadRegister(handle,reg,&data);
+  printf("Channel %d DC offset: %x, %d\n",7,data,data);
+  */
+  return ret;
+
+
+  
+}
+
+int FADCChannelConfig(){
+  int ret;
+  
+  printf("Configuring channels ........ \n");
+  CAEN_DGTZ_SetChannelEnableMask(handle,cfg->chmask);
+  FADCChannelsCallibrate();
+
+  ret = FADCSetChannelOffsets();
+
+  //CAEN_DGTZ_SetChannelEnableMask(handle,0);        /* Enable channel 0,1,2,3 */
+  CAEN_DGTZ_SetChannelEnableMask(handle,cfg->chmask);        /* Enable channel 0,1,2,3 */
+  printf("----------DONE\n");
+  
+  return ret;
+}
+
+int FADCAcquisitionConfig(){
+}
+
+int FADCInit(){
+}
+
+
+CAEN_DGTZ_ErrorCode FADCBoardInit(){
+  CAEN_DGTZ_ErrorCode ret;
+  CAEN_DGTZ_BoardInfo_t BoardInfo;
+  int MajorNumber;
+
+
+  //Using only 1 board
+  ret = CAEN_DGTZ_OpenDigitizer(CAEN_DGTZ_OpticalLink,0,0,0,&handle);  
+  //ret = CAEN_DGTZ_OpenDigitizer(CAEN_DGTZ_USB,0,0,0xAAAA0000,&handle);
+
+/*
+handle=0;
+FADCStopAcquisition();
+CAEN_DGTZ_Reset(handle);  
+CAEN_DGTZ_CloseDigitizer(handle);
+*/
+  if(ret != CAEN_DGTZ_Success) {
+    printf("Can't open digitizer - %d\n", ret);
+    exit(0);
+    return 0;
+  }
+  printf("Board handle: %d\n",handle);
+  
+  //Reset the board
+  ret |= CAEN_DGTZ_Reset(handle);                                               /* Reset Digitizer */
+  ret |= CAEN_DGTZ_GetInfo(handle, &BoardInfo);                                 /* Get Board Info */
+  printf("\nBoard info after reset\n");
+  printf("\tROC FPGA Release is %s\n", BoardInfo.ROC_FirmwareRel);
+  printf("\tAMC FPGA Release is %s\n", BoardInfo.AMC_FirmwareRel);
+  
+  sscanf(BoardInfo.AMC_FirmwareRel, "%d", &MajorNumber);
+  if ( MajorNumber == 132 ) {
+    //DPP firmware:
+    printf("\t =======> Digital signal processing on board: ON\n");
+    if(cfg->usedpp){
+      printf("\t=======> DPP enabled in software: CONFIGURING\n"); 
+    } else {
+      printf("\t=======> DPP disabled in software: EXITING!\n");
+      CAEN_DGTZ_Reset(handle);
+      CAEN_DGTZ_CloseDigitizer(handle);
+      exit(0);
+    }
+  } else {
+    //No DPP firmware:
+    printf("\t =======> Digital signal processing on board: OFF\n");
+    if(cfg->usedpp){
+      printf("\t=======> DPP enabled in software: mismatch, EXITING\n");
+      CAEN_DGTZ_Reset(handle);
+      CAEN_DGTZ_CloseDigitizer(handle);
+      exit(0);
+    } else {
+      printf("\t=======> DPP disabled in software\n");
+    }
+  }
+  return ret;
+}
+
+
+
+
+
+int FADCIOSetup(){
+  CAEN_DGTZ_ErrorCode ret;
+  int reg,data;
+
+  if(cfg->usedpp) {
+    //Use event aggregations:
+    // Set how many events to accumulate in the board memory before being available for readout
+    ret |= CAEN_DGTZ_SetDPPEventAggregation(handle, Params.EventAggr, 0);
+    /* Set the mode used to syncronize the acquisition between different boards.
+       In this example the sync is disabled */
+    ret |= CAEN_DGTZ_SetRunSynchronizationMode(handle, CAEN_DGTZ_RUN_SYNC_Disabled);
+    
+    
+
+  } else {
+    //Custom buffer organization:
+    
+    //Buffers organization - 1024 individual buffers, maximum of 1024 events
+    reg = 0x800C;
+    data = 0;
+    /* data = data | (0x1 << 3); // */
+    /* data = data | (0x1 << 1); //  */
+    CAEN_DGTZ_WriteRegister(handle,reg,data );
+    
+    //Readout/IO configuration
+    //    ret |= CAEN_DGTZ_SetMaxNumEventsBLT(handle,1024);     /* Set the max number of events to transfer in a sigle readout */
+    ret |= CAEN_DGTZ_SetMaxNumEventsBLT(handle,512);     /* Set the max number of events to transfer in a sigle readout */
+  }
+  
+  
+  //Interrupts configuration
+#ifdef USE_INTERRUPTS
+  ret |= CAEN_DGTZ_SetInterruptConfig(handle,CAEN_DGTZ_ENABLE,1,0,INT_N_EVENTS,CAEN_DGTZ_IRQ_MODE_RORA);
+#endif
+  
+  return ret;
+}
+
+
+int FADCDigitizationSetup(){
+  CAEN_DGTZ_ErrorCode ret=0;
+
+  if(cfg->usedpp) {
+    
+    /* CAEN_DGTZ_DPP_SAVE_PARAM_EnergyOnly        Only energy (DPP-PHA) or charge (DPP-PSD/DPP-CI v2) is returned */
+    /*   CAEN_DGTZ_DPP_SAVE_PARAM_TimeOnly        Only time is returned */
+    /*   CAEN_DGTZ_DPP_SAVE_PARAM_EnergyAndTime    Both energy/charge and time are returned */
+    /*   CAEN_DGTZ_DPP_SAVE_PARAM_None            No histogram data is returned *\/ */
+    ret |= CAEN_DGTZ_SetDPPAcquisitionMode(handle, Params.AcqMode, CAEN_DGTZ_DPP_SAVE_PARAM_EnergyAndTime);
+    
+    
+    
+
+    
+  } else {
+    //Samples configuration
+    //ret |= CAEN_DGTZ_SetRecordLength(handle,49);     /* Set the lenght of each waveform (in samples) */
+    ret |= CAEN_DGTZ_SetRecordLength(handle,1022);     /* Set the lenght of each waveform (in samples) */
+    //ret |= CAEN_DGTZ_SetRecordLength(handle,1800000);     /* Set the lenght of each waveform (in samples) */
+    // Nsamples: 8trig * 16 ns  +- 16 ns + time_to_reach_10mv .... ~= 150ns and should be =0 (mod 7) :)
+    ret |= CAEN_DGTZ_SetPostTriggerSize(handle,40);  //Post trigger samples in %
+  }
+  return ret;
+}
+
+
+int FADCBoardExit(){
+  
+}
+
+int FADCExit(){
+}
+
+int FADCStartAcquisition(){
+  int reg,data;
+  // enabling the trigger count:
+
+  reg = 0x8100;
+  data = 0;
+  data = data | (0x1 << 3); //Count all triggers
+#ifdef SOR_EOB_MODE 
+  data = data | (0x1 << 0); //S_IN controlled mode
+#endif
+  data = data | (0x1 << 2); //Acquisition RUN
+
+  return CAEN_DGTZ_WriteRegister(handle,reg,data );
+}
+
+int FADCStopAcquisition(){
+  return CAEN_DGTZ_WriteRegister(handle,0x8100,0 );
+}
+
+int FADCCleanBuffers(){
+  return CAEN_DGTZ_WriteRegister(handle,0x8010,1024);
+}
+
+int FADCCleanErrors(){
+  //  CAEN_DGTZ_WriteRegister(handle,,0 );
+  return 0;
+}

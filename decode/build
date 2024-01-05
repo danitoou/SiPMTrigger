@@ -1,0 +1,10 @@
+#!/bin/tcsh
+set echo
+
+rm decode.o
+g++ -std=gnu++17 -O2 -g  -pg -c decode.c -I `root-config --incdir` -I/usr/include/shift -I /usr/include/xrootd -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+#`cernlib packlib kernlib`
+
+g++ -O2 -std=gnu++17 -g -pg -o decode decode.o  \
+#-L/cern/pro/lib/ \
+`root-config --libs` -lXrdPosixPreload -L/usr/lib64/xrootd/ 
