@@ -269,7 +269,8 @@ typedef struct {
   TH1F *rate;
   TH1F *tot_energy;
   TH1F *ch_all_trig[MAX_N_CHANNELS];
-  // TH1F *ch_four_seven[MAX_N_CHANNELS];
+  TH1F *ch_all_trig_norm[MAX_N_CHANNELS];
+  TH1F *ch_all_trig_energy[MAX_N_CHANNELS];
   TH1F *ch_int[MAX_N_CHANNELS];
   TH1F *ch_energy[MAX_N_CHANNELS];
   TH1F *ch_ev_ped[MAX_N_CHANNELS];
@@ -518,8 +519,13 @@ void histo_init(char *hfile){
   for(i=0;i<MAX_N_CHANNELS;i++) {
     sprintf(name,"ch%d_pe_all",i);
     sprintf(title,"Photoelectrons in channel %d when all 4 channels are triggered",i);
-    histo->ch_all_trig[i] = new TH1F(name,title,300,0,300);
-    // else histo->ch_four_seven[i] = new TH1F(name,title,2200,0,300);
+    histo->ch_all_trig[i] = new TH1F(name,title,300,0,1000);
+    sprintf(name,"ch%d_pe_all_norm",i);
+    sprintf(title,"PE in channel %d when all 4 channels are triggered (normalized)",i);
+    histo->ch_all_trig_norm[i] = new TH1F(name,title,300,0,1000);
+    sprintf(name,"ch%d_energy_all",i);
+    sprintf(title,"Energy released in channel %d when all 4 channels are triggered (Mev)",i);
+    histo->ch_all_trig_energy[i] = new TH1F(name,title,12,0,12);
     sprintf(name,"ch%d_int",i);
     sprintf(title,"Integral of the signal in channel %d",i);
     histo->ch_int[i]   =  new TH1F(name, title ,157696,0.0,1024.*1540);
@@ -1880,10 +1886,24 @@ int ana_event(myevent *evt){
     651700.9375*voltage-34622918.59375,
     817228.5625*voltage-43756791.125,
     772854*voltage-41316392.40625
-    };
+  };
+
+  float coeff[] = {
+    2.21207461082906,
+    1,
+    0.89542194005854,
+    0.651983205322067,
+    0.490915511858852,
+    0.527208128912069,
+    0.666423766386181,
+    1.396295552252
+  };
 
   bool all_4_ch = true;
-  for(int i = 0; i < 4; i++) {
+  if(evt->ch[0].hit_width.charge < 12e-12) {
+      all_4_ch = false;
+  }
+  for(int i = 1; i < 4; i++) {
     if(evt->ch[i].hit_width.charge < 15e-12) {
       all_4_ch = false;
     }
@@ -1891,6 +1911,8 @@ int ana_event(myevent *evt){
   if(all_4_ch) {
     for(int i = 0; i < 4; i++) {
       histo->ch_all_trig[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i]));
+      histo->ch_all_trig_norm[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i])*coeff[i]);
+      histo->ch_all_trig_energy[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i])*coeff[i]*2/173.762);
     }
   }
 
@@ -1903,6 +1925,8 @@ int ana_event(myevent *evt){
   if(all_4_ch) {
     for(int i = 4; i < 8; i++) {
       histo->ch_all_trig[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i]));
+      histo->ch_all_trig_norm[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i])*coeff[i]);
+      histo->ch_all_trig_energy[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i])*coeff[i]*2/173.762);
     }
   }
 
