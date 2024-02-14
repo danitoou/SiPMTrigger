@@ -1,0 +1,6 @@
+/.vscode/
+/sim/build/*
+!/sim/build/*.root
+!/sim/build/*.py
+!/sim/build/data.txt
+!/sim/build/output.txt
