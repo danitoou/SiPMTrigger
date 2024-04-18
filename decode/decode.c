@@ -271,7 +271,10 @@ typedef struct {
   TH1F *ch_all_trig[MAX_N_CHANNELS];
   TH1F *ch_all_trig_norm[MAX_N_CHANNELS];
   TH1F *ch_all_trig_energy[MAX_N_CHANNELS];
+<<<<<<< HEAD
   TH1F *ch_vs_ch_trig_energy[32];
+=======
+>>>>>>> 2527d7ecde7d803f4a831859b70d1613db6ac06e
   TH1F *ch_int[MAX_N_CHANNELS];
   TH1F *ch_energy[MAX_N_CHANNELS];
   TH1F *ch_ev_ped[MAX_N_CHANNELS];
@@ -564,6 +567,7 @@ void histo_init(char *hfile){
 
       ihis++;      
     }
+<<<<<<< HEAD
     if(i < 4) {
       for(int j = 4; j < 8; j++) {
         sprintf(name,"ch%d_ch%d_trig_energy",i, j);
@@ -579,6 +583,8 @@ void histo_init(char *hfile){
         histo->ch_vs_ch_trig_energy[4*i + j] = new TH1F(name,title,200,0.,1.e-9);
       }
     }
+=======
+>>>>>>> 2527d7ecde7d803f4a831859b70d1613db6ac06e
     
     sprintf(name,"ch%d_max_sample",i);
     histo->ch_imax[i] = new TH1F(name,"Index of maximal sample",1024,0,1024);
