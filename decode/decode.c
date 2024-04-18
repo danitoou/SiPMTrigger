@@ -271,6 +271,7 @@ typedef struct {
   TH1F *ch_all_trig[MAX_N_CHANNELS];
   TH1F *ch_all_trig_norm[MAX_N_CHANNELS];
   TH1F *ch_all_trig_energy[MAX_N_CHANNELS];
+  TH1F *ch_vs_ch_trig_energy[32];
   TH1F *ch_int[MAX_N_CHANNELS];
   TH1F *ch_energy[MAX_N_CHANNELS];
   TH1F *ch_ev_ped[MAX_N_CHANNELS];
@@ -562,6 +563,21 @@ void histo_init(char *hfile){
       histo->ch_ch_time_diff_ecut[ihis] = new TH1F(name,title,200,-100.,100.);
 
       ihis++;      
+    }
+    if(i < 4) {
+      for(int j = 4; j < 8; j++) {
+        sprintf(name,"ch%d_ch%d_trig_energy",i, j);
+        sprintf(title,"Ch%d energy when ch%d was triggered", i, j);
+        histo->ch_vs_ch_trig_energy[4*i + j-4] = new TH1F(name,title,200,0.,1.e-9);
+      }
+    }
+
+    if(i >= 4) {
+      for(int j = 0; j < 4; j++) {
+        sprintf(name,"ch%d_ch%d_trig_energy",i, j);
+        sprintf(title,"Ch%d energy when ch%d was triggered", i, j);
+        histo->ch_vs_ch_trig_energy[4*i + j] = new TH1F(name,title,200,0.,1.e-9);
+      }
     }
     
     sprintf(name,"ch%d_max_sample",i);
@@ -1930,6 +1946,22 @@ int ana_event(myevent *evt){
     }
   }
 
+
+  for(int i = 0; i < evt->nch/2; i++) {
+    for(int j = 4; j < evt->nch; j++) {
+      if(evt->ch[i].hit_width.charge > 15e-12 && evt->ch[j].hit_width.charge > 15e-12) {
+        histo->ch_vs_ch_trig_energy[4*i + j - 4]->Fill(evt->ch[i].hit_width.charge);
+      }
+    }   
+  }
+
+  for(int i = 4; i < evt->nch; i++) {
+    for(int j = 0; j < evt->nch/2; j++) {
+      if(evt->ch[i].hit_width.charge > 15e-12 && evt->ch[j].hit_width.charge > 15e-12) {
+        histo->ch_vs_ch_trig_energy[4*i + j]->Fill(evt->ch[i].hit_width.charge);
+      }
+    }   
+  }
   
   
   

@@ -4,3 +4,4 @@
 !/sim/build/*.py
 !/sim/build/data.txt
 !/sim/build/output.txt
+/daq/data-Z-56.0V/*
