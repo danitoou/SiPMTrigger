@@ -12,6 +12,8 @@ G4VPhysicalVolume *MyDetectorConstruction::Construct() {
 
     H = nist->FindOrBuildElement("H");
 
+    scintMat = nist->FindOrBuildMaterial("G4_POLYSTYRENE");
+
     Vacuum = new G4Material("Vacuum", pow(10, -25)*g/cm3, 1);
     Vacuum->AddElement(H, 100*perCent);
 
@@ -29,25 +31,19 @@ G4VPhysicalVolume *MyDetectorConstruction::Construct() {
 
     solidDetector = new G4Box("solidDetector", 2*cm, 0.5*cm, 0.5*cm);
 
-    logicDetector = new G4LogicalVolume(solidDetector, Vacuum, "logicDetector");
+    logicDetector = new G4LogicalVolume(solidDetector, scintMat, "logicDetector");
 
 
     G4RotationMatrix *rot = new G4RotationMatrix();
 
     rot->rotateZ(90*deg);
 
-    physDetector = new G4PVPlacement(0, G4ThreeVector(0*cm, -(yWorld-0.005)*m, 0.5*cm), logicDetector, "physDetector", logicWorld, false, 0, true);
-    physDetector = new G4PVPlacement(0, G4ThreeVector(0*cm, -(yWorld-0.015)*m, 0.5*cm), logicDetector, "physDetector", logicWorld, false, 1, true);
-    physDetector = new G4PVPlacement(0, G4ThreeVector(0*cm, -(yWorld-0.025)*m, 0.5*cm), logicDetector, "physDetector", logicWorld, false, 2, true);
-    physDetector = new G4PVPlacement(0, G4ThreeVector(0*cm, -(yWorld-0.035)*m, 0.5*cm), logicDetector, "physDetector", logicWorld, false, 3, true);
-    physDetector = new G4PVPlacement(rot, G4ThreeVector(1.5*cm, -(yWorld-0.02)*m, -0.5*cm), logicDetector, "physDetector", logicWorld, false, 4, true);
-    physDetector = new G4PVPlacement(rot, G4ThreeVector(0.5*cm, -(yWorld-0.02)*m, -0.5*cm), logicDetector, "physDetector", logicWorld, false, 5, true);
-    physDetector = new G4PVPlacement(rot, G4ThreeVector(-0.5*cm, -(yWorld-0.02)*m, -0.5*cm), logicDetector, "physDetector", logicWorld, false, 6, true);
-    physDetector = new G4PVPlacement(rot, G4ThreeVector(-1.5*cm, -(yWorld-0.02)*m, -0.5*cm), logicDetector, "physDetector", logicWorld, false, 7, true);
+    for(int i = 0; i < 4; i++) {
+        physDetector = new G4PVPlacement(0, G4ThreeVector(0*cm, -(yWorld-0.01*(i+0.5))*m + 0.01*cm, 0.5*cm), logicDetector, "physDetector", logicWorld, false, i, true);
+        physDetector = new G4PVPlacement(rot, G4ThreeVector((1.5-i)*cm, -(yWorld-0.02)*m + 0.01*cm, -0.5*cm), logicDetector, "physDetector", logicWorld, false, i+4, true);
+    }
 
     
-
-
     return physWorld;
     
 }

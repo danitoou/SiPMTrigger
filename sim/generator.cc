@@ -6,7 +6,7 @@ MyPrimaryGenerator::MyPrimaryGenerator() {
 
     G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();
 
-    G4String particleName = "gamma";
+    G4String particleName = "mu-";
 
     G4ParticleDefinition *particle = particleTable->FindParticle(particleName);
 
@@ -19,6 +19,8 @@ MyPrimaryGenerator::MyPrimaryGenerator() {
 
     randX = xWorld*(G4UniformRand() - G4UniformRand())*m;
     randZ = zWorld*(G4UniformRand() - G4UniformRand())*m;
+    // randX = 0*m;
+    // randZ = 0*m;
 
     dist = pow(randX, 2) + pow(randZ, 2);
     randPos = G4ThreeVector(randX, yWorld*m, randZ);
@@ -40,7 +42,7 @@ MyPrimaryGenerator::~MyPrimaryGenerator() {
 
 void MyPrimaryGenerator::GeneratePrimaries(G4Event *anEvent) {
 
-    if(counter % (1000000000/100) == 0) {
+    if(counter % (1000000000/100) == 0 ) {
         G4cout << counter*100/1000000000 << "%" << G4endl;
     }
     counter++;
@@ -51,6 +53,8 @@ void MyPrimaryGenerator::GeneratePrimaries(G4Event *anEvent) {
 
     randX = xWorld*(G4UniformRand() - G4UniformRand())*m;
     randZ = zWorld*(G4UniformRand() - G4UniformRand())*m;
+    // randX = 0*m;
+    // randZ = 0*m;
 
 
     dist = pow(randX, 2) + pow(randZ, 2);

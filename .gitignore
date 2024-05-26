@@ -2,6 +2,8 @@
 /sim/build/*
 !/sim/build/*.root
 !/sim/build/*.py
-!/sim/build/data.txt
-!/sim/build/output.txt
+!/sim/build/*.txt
+/sim/build/CMakeCache.txt
+!/sim/build/readTree.c
 /daq/data-Z-56.0V/*
+/daq/data-X-56.0V/*

@@ -31,7 +31,7 @@ private:
 
     G4GenericMessenger *fMessenger;
 
-    G4Material *Vacuum;
+    G4Material *Vacuum, *scintMat;
     G4Element *H;
 
     void DefineMaterials();

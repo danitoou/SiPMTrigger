@@ -271,10 +271,7 @@ typedef struct {
   TH1F *ch_all_trig[MAX_N_CHANNELS];
   TH1F *ch_all_trig_norm[MAX_N_CHANNELS];
   TH1F *ch_all_trig_energy[MAX_N_CHANNELS];
-<<<<<<< HEAD
   TH1F *ch_vs_ch_trig_energy[32];
-=======
->>>>>>> 2527d7ecde7d803f4a831859b70d1613db6ac06e
   TH1F *ch_int[MAX_N_CHANNELS];
   TH1F *ch_energy[MAX_N_CHANNELS];
   TH1F *ch_ev_ped[MAX_N_CHANNELS];
@@ -284,6 +281,11 @@ typedef struct {
   
   TH1F *ch_ch_time_diff[(MAX_N_CHANNELS*(MAX_N_CHANNELS-1)) / 2];
   TH1F *ch_ch_time_diff_ecut[(MAX_N_CHANNELS*(MAX_N_CHANNELS-1)) / 2];
+
+  TH1F *ch_ev_count[MAX_N_CHANNELS];
+  TH1F *ch_ch_ev_count[MAX_N_CHANNELS*(MAX_N_CHANNELS-1)/2];
+  TH1F *ch_ch_ch_ev_count[MAX_N_CHANNELS*(MAX_N_CHANNELS-1)*(MAX_N_CHANNELS-2)/6];
+  TH1F *first_four_ch_ev_count;
 
   TH1F *ch_imax[MAX_N_CHANNELS];
   TH1F *ch_imax_cut[MAX_N_CHANNELS];
@@ -518,6 +520,22 @@ void histo_init(char *hfile){
   histo->ch_12_dt = new TH1F("ch03_time_diff","Maximal sample time difference",100,-50.,50.);
   histo->ch_47_dt = new TH1F("ch47_time_diff","Maximal sample time difference",100,-50.,50.);
 
+  ihis = 0;
+  for(i=0;i<MAX_N_CHANNELS;i++) {
+    sprintf(name, "ch%d_ev_count", i);
+    sprintf(title, "Events in channel %d", i);
+    histo->ch_ev_count[i] = new TH1F(name, title, 5, 0, 5);
+
+    for(int j = i+1; j < MAX_N_CHANNELS; j++) {
+      sprintf(name, "ch%d_ch%d_ev_count", i, j);
+      sprintf(title, "Simultaneous events in channel %d and %d", i, j);
+      histo->ch_ch_ev_count[ihis] = new TH1F(name, title, 5, 0, 5);
+      ihis++;
+    }
+  }
+
+  histo->first_four_ch_ev_count = new TH1F("first_four_ch_ev_count", "Simultaneous events in first four channels", 5, 0, 5);
+  ihis = 0;
 
   
   for(i=0;i<MAX_N_CHANNELS;i++) {
@@ -567,7 +585,6 @@ void histo_init(char *hfile){
 
       ihis++;      
     }
-<<<<<<< HEAD
     if(i < 4) {
       for(int j = 4; j < 8; j++) {
         sprintf(name,"ch%d_ch%d_trig_energy",i, j);
@@ -583,8 +600,6 @@ void histo_init(char *hfile){
         histo->ch_vs_ch_trig_energy[4*i + j] = new TH1F(name,title,200,0.,1.e-9);
       }
     }
-=======
->>>>>>> 2527d7ecde7d803f4a831859b70d1613db6ac06e
     
     sprintf(name,"ch%d_max_sample",i);
     histo->ch_imax[i] = new TH1F(name,"Index of maximal sample",1024,0,1024);
@@ -1935,6 +1950,7 @@ int ana_event(myevent *evt){
       histo->ch_all_trig[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i]));
       histo->ch_all_trig_norm[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i])*coeff[i]);
       histo->ch_all_trig_energy[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i])*coeff[i]*2/173.762);
+      histo->first_four_ch_ev_count->Fill(0);
     }
   }
 
@@ -1969,6 +1985,19 @@ int ana_event(myevent *evt){
     }   
   }
   
+  ihis = 0;
+  for(i=0;i<MAX_N_CHANNELS;i++) {
+    if(evt->ch[i].hit_width.charge > 15e-12) {
+        histo->ch_ev_count[i]->Fill(0);
+
+      for(int j = i+1; j < MAX_N_CHANNELS; j++) {
+        if(evt->ch[j].hit_width.charge > 15e-12) {
+          histo->ch_ev_count[ihis]->Fill(0);
+        }
+        ihis++;
+      }
+    }
+  }
   
   
   

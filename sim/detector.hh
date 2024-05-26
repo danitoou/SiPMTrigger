@@ -7,6 +7,7 @@
 #include "G4VSensitiveDetector.hh"
 #include "G4AnalysisManager.hh"
 #include "G4RunManager.hh"
+#include <cmath>
 
 class MySensitiveDetector : public G4VSensitiveDetector {
 
@@ -16,6 +17,9 @@ public:
 
 private:
     virtual G4bool ProcessHits(G4Step *, G4TouchableHistory *);
+    G4double entryEnergy[4];
+    G4int preStepCopyNo[4];
+    bool prevEvtNum;
 
 };
 

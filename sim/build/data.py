@@ -1,4 +1,4 @@
-file = open('/home/danitoou/geant4/sipmtrigger/build/data.txt')
+file = open('/home/danitoou/Desktop/SiPMTrigger/sim/build/data.txt')
 
 channels = [[] for i in range(8)]
 while True:
