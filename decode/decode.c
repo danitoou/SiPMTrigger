@@ -521,12 +521,12 @@ void histo_init(char *hfile){
   histo->ch_47_dt = new TH1F("ch47_time_diff","Maximal sample time difference",100,-50.,50.);
 
   ihis = 0;
-  for(i=0;i<MAX_N_CHANNELS;i++) {
+  for(i=0;i<8;i++) {
     sprintf(name, "ch%d_ev_count", i);
     sprintf(title, "Events in channel %d", i);
     histo->ch_ev_count[i] = new TH1F(name, title, 5, 0, 5);
 
-    for(int j = i+1; j < MAX_N_CHANNELS; j++) {
+    for(int j = i+1; j < 8; j++) {
       sprintf(name, "ch%d_ch%d_ev_count", i, j);
       sprintf(title, "Simultaneous events in channel %d and %d", i, j);
       histo->ch_ch_ev_count[ihis] = new TH1F(name, title, 5, 0, 5);
@@ -1986,13 +1986,26 @@ int ana_event(myevent *evt){
   }
   
   ihis = 0;
-  for(i=0;i<MAX_N_CHANNELS;i++) {
-    if(evt->ch[i].hit_width.charge > 15e-12) {
-        histo->ch_ev_count[i]->Fill(0);
+  
+  if(evt->ch[0].hit_width.charge > 12e-12) {
+    histo->ch_ev_count[0]->Fill(0);
 
-      for(int j = i+1; j < MAX_N_CHANNELS; j++) {
+    for(int j = 1; j < 8; j++) {
+      if(evt->ch[j].hit_width.charge > 15e-12) {
+        histo->ch_ch_ev_count[ihis]->Fill(0);
+      }
+      ihis++;
+    }
+  }
+
+
+  for(i = 1; i < 8; i++) {
+    if(evt->ch[i].hit_width.charge > 15e-12) {
+      histo->ch_ev_count[i]->Fill(0);
+
+      for(int j = i+1; j < 8; j++) {
         if(evt->ch[j].hit_width.charge > 15e-12) {
-          histo->ch_ev_count[ihis]->Fill(0);
+          histo->ch_ch_ev_count[ihis]->Fill(0);
         }
         ihis++;
       }
