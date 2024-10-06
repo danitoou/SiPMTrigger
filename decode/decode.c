@@ -137,6 +137,7 @@ float hv=0;
 float gain=0;
 int nfiles = 0;
 int n1e_sac = 0;
+int test_count = 0;
 
 
 
@@ -1641,6 +1642,19 @@ int trigger_single_electron(myevent *evt) {
   return 1;
 }
 
+int calculate_ihis(int i, int j) {
+  int ihis = 0;
+  for(int x = 0; x < 7; x++) {
+    for(int y = x + 1; y < 8; y++) {
+      if(x == i && y == j) {
+        return ihis;
+      } else {
+        ihis++;
+      }
+    }
+  }
+}
+
 
 int ana_event(myevent *evt){
   int i,j;
@@ -1950,8 +1964,8 @@ int ana_event(myevent *evt){
       histo->ch_all_trig[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i]));
       histo->ch_all_trig_norm[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i])*coeff[i]);
       histo->ch_all_trig_energy[i]->Fill(evt->ch[i].hit_width.charge/((1.6e-19)*gain[i])*coeff[i]*2/173.762);
-      histo->first_four_ch_ev_count->Fill(0);
     }
+    histo->first_four_ch_ev_count->Fill(0);
   }
 
   all_4_ch = true;
@@ -1992,11 +2006,20 @@ int ana_event(myevent *evt){
 
     for(int j = 1; j < 8; j++) {
       if(evt->ch[j].hit_width.charge > 15e-12) {
+        ihis = j - 1;
+        // ihis = calculate_ihis(i, j);
         histo->ch_ch_ev_count[ihis]->Fill(0);
+        if(j == 3 && evt->ch[1].hit_width.charge > 5e-13 && evt->ch[2].hit_width.charge > 5e-13 && evt->ch[1].hit_width.charge < 15e-12 && evt->ch[2].hit_width.charge < 15e-12 ) {
+          test_count++;
+          printf("Kyp count: %d; ch1 = %.5f; ch2 = %.5f\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", test_count, evt->ch[1].hit_width.charge*1e12, evt->ch[2].hit_width.charge*1e12);
+          
+        }
       }
-      ihis++;
+      // ihis++;
     }
   }
+
+  ihis = 7;
 
 
   for(i = 1; i < 8; i++) {
@@ -2005,14 +2028,18 @@ int ana_event(myevent *evt){
 
       for(int j = i+1; j < 8; j++) {
         if(evt->ch[j].hit_width.charge > 15e-12) {
+          // ihis = 8*i + j - 1;
+          ihis = calculate_ihis(i, j);
           histo->ch_ch_ev_count[ihis]->Fill(0);
         }
         ihis++;
       }
+    } else {
+      ihis += 7 - i;
     }
+    // ihis++;
   }
-  
-  
+
   
 
 

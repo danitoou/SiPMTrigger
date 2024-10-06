@@ -6,9 +6,10 @@
 #include <stdlib.h>
 #include <cstdio>
 
-void readTree() {
+void readTree(char const *filename) {
 
-    TFile *input = new TFile("output.root", "READ");
+    // TFile *input = new TFile("output.root", "READ");
+    TFile *input = new TFile(filename, "READ");
 
     TFile *output = new TFile("histos.root", "RECREATE");
     TCanvas *c1 = new TCanvas();
